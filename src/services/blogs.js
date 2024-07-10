@@ -4,7 +4,7 @@ const baseUrl = '/api/blogposts';
 let token = null;
 
 const setToken = (newToken) => {
-    token = `bearer ${newToken}`;
+    token = `Bearer ${newToken}`;
 };
 const getAll = () => {
     const request = axios.get(baseUrl);
