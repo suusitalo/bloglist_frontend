@@ -1,43 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Blog from './components/Blog';
 import blogService from './services/blogs';
 import loginService from './services/login';
 import LoginForm from './components/LoginForm.jsx';
 import BlogCreationForm from './components/BlogCreationForm.jsx';
 import { Notification } from './components/Notification/Notification.jsx';
+import Togglable from './components/Togglable.jsx';
 
 const App = () => {
     const [blogs, setBlogs] = useState([]);
     const [user, setUser] = useState('');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [blogTitle, setBlogTitle] = useState('');
-    const [blogAuthor, setBlogAuthor] = useState('');
-    const [blogUrl, setBlogUrl] = useState('');
     const [notificationMessage, setNotificationMessage] = useState('');
     const [notificationType, setNotificationType] = useState('');
 
-    const handleTitleChange = (event) => {
-        setBlogTitle(event.target.value);
-    };
+    const blogFormRef = useRef();
 
-    const handleAuthorChange = (event) => {
-        setBlogAuthor(event.target.value);
-    };
-
-    const handleUrlChange = (event) => {
-        setBlogUrl(event.target.value);
-    };
-
-    const handleBlogSubmit = async (event) => {
-        event.preventDefault();
-
-        const blogObject = {
-            title: blogTitle,
-            author: blogAuthor,
-            url: blogUrl,
-        };
-
+    const handleBlogSubmit = async (blogObject) => {
+        console.log('blogObject', blogObject);
         try {
             await blogService.create(blogObject);
             handleNotification('New blog created', 'success');
@@ -45,12 +26,6 @@ const App = () => {
             handleNotification('Failed to create new blog', 'error');
             console.error('Failed to create new blog', exception);
         }
-    };
-
-    const clearInputFields = () => {
-        setBlogAuthor('');
-        setBlogTitle('');
-        setBlogUrl('');
     };
 
     const fetchAllBlogs = async () => {
@@ -76,7 +51,7 @@ const App = () => {
             setUsername('');
             setPassword('');
         } catch (exception) {
-            handleNotification('error', 'Wrong credentials');
+            handleNotification('Invalid credentials', 'error');
             console.error('Wrong credentials');
         }
     };
@@ -89,7 +64,6 @@ const App = () => {
     const handleNotification = (message, type) => {
         setNotificationMessage(message);
         setNotificationType(type);
-        clearInputFields();
         setTimeout(() => {
             setNotificationMessage(null);
             setNotificationType(null);
@@ -115,6 +89,7 @@ const App = () => {
 
     return (
         <div>
+            <h1>Bloglist</h1>
             {notificationMessage && (
                 <Notification
                     message={notificationMessage}
@@ -122,13 +97,15 @@ const App = () => {
                 />
             )}
             {!user ? (
-                <LoginForm
-                    handleSubmit={handleLoginSubmit}
-                    username={username}
-                    setUsername={setUsername}
-                    password={password}
-                    setPassword={setPassword}
-                />
+                <Togglable buttonLabel="Login" ref={blogFormRef}>
+                    <LoginForm
+                        handleSubmit={handleLoginSubmit}
+                        username={username}
+                        setUsername={setUsername}
+                        password={password}
+                        setPassword={setPassword}
+                    />
+                </Togglable>
             ) : (
                 <div>
                     {user.name} logged in{' '}
@@ -139,15 +116,9 @@ const App = () => {
             )}
             {user && (
                 <>
-                    <BlogCreationForm
-                        title={blogTitle}
-                        handleTitleChange={handleTitleChange}
-                        author={blogAuthor}
-                        handleAuthorChange={handleAuthorChange}
-                        blogUrl={blogUrl}
-                        handleUrlChange={handleUrlChange}
-                        handleOnSubmit={handleBlogSubmit}
-                    />
+                    <Togglable buttonLabel="Create new blog" ref={blogFormRef}>
+                        <BlogCreationForm handleSubmit={handleBlogSubmit} />
+                    </Togglable>
                     <h2>blogs</h2>
                     {blogs.map((blog) => (
                         <Blog key={blog.id} blog={blog} />
