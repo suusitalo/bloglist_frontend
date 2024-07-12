@@ -16,9 +16,19 @@ const App = () => {
     const [notificationType, setNotificationType] = useState('');
 
     const blogFormRef = useRef();
+    const blogRef = useRef();
+
+    const fetchAllBlogs = async () => {
+        try {
+            const fetchedBlogs = await blogService.getAll();
+            arrangeBlogsByLikes(fetchedBlogs);
+        } catch {
+            handleNotification('Failed to fetch blogs', 'error');
+            console.error('Failed to fetch blogs');
+        }
+    };
 
     const handleBlogSubmit = async (blogObject) => {
-        console.log('blogObject', blogObject);
         try {
             await blogService.create(blogObject);
             handleNotification('New blog created', 'success');
@@ -28,8 +38,9 @@ const App = () => {
         }
     };
 
-    const fetchAllBlogs = async () => {
-        blogService.getAll().then((blogs) => setBlogs(blogs));
+    const arrangeBlogsByLikes = (fetchedBlogs) => {
+        const sortedBlogs = [...fetchedBlogs].sort((a, b) => b.likes - a.likes);
+        setBlogs(sortedBlogs);
     };
 
     const handleLoginSubmit = async (event) => {
@@ -61,6 +72,29 @@ const App = () => {
         window.localStorage.removeItem('loggedBlogAppUser');
     };
 
+    const handleLikeButtonClick = async (blog) => {
+        try {
+            const updatedBlog = { ...blog, likes: blog.likes + 1 };
+            await blogService.update(blog.id, updatedBlog);
+            fetchAllBlogs();
+        } catch (exception) {
+            handleNotification('Failed to like blog', 'error');
+            console.error('Failed to like blog', exception);
+        }
+    };
+
+    const handleBlogDelete = async (blog) => {
+        if (window.confirm(`Delete ${blog.title} by ${blog.author} ?`)) {
+            try {
+                await blogService.remove(blog.id);
+                handleNotification('Blog deleted', 'success');
+            } catch (exception) {
+                handleNotification('Failed to delete blog', 'error');
+                console.error('Failed to delete blog', exception);
+            }
+        }
+    };
+
     const handleNotification = (message, type) => {
         setNotificationMessage(message);
         setNotificationType(type);
@@ -71,10 +105,6 @@ const App = () => {
     };
 
     useEffect(() => {
-        fetchAllBlogs();
-    }, []);
-
-    useEffect(() => {
         const loggedUserJSON = window.localStorage.getItem('loggedBlogAppUser');
         if (loggedUserJSON) {
             const user = JSON.parse(loggedUserJSON);
@@ -82,6 +112,15 @@ const App = () => {
             blogService.setToken(user.token);
         }
     }, []);
+
+    useEffect(() => {
+        fetchAllBlogs();
+    }, []);
+
+    useEffect(() => {
+        const currentBlogs = blogs;
+        if (blogs !== currentBlogs) arrangeBlogsByLikes();
+    }, [blogs]);
 
     useEffect(() => {
         fetchAllBlogs();
@@ -121,7 +160,14 @@ const App = () => {
                     </Togglable>
                     <h2>blogs</h2>
                     {blogs.map((blog) => (
-                        <Blog key={blog.id} blog={blog} />
+                        <Blog
+                            ref={blogRef}
+                            key={blog.id}
+                            blog={blog}
+                            handleLikeButtonClick={handleLikeButtonClick}
+                            handleBlogDelete={handleBlogDelete}
+                            userId={user.id}
+                        />
                     ))}
                 </>
             )}
